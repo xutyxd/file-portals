@@ -1,0 +1,64 @@
+
+stages:
+  - test
+  - build
+  - release
+
+setup:
+  image: node:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+  stage: .pre
+  script:
+    - npm install
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+    policy: push
+
+test:
+  image: node:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+  stage: test
+  script:
+    - npm run test
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - coverage
+    policy: pull-push
+
+build:
+  image: node:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+  stage: build
+  script:
+    - npm run build
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - cjs
+      - mjs
+    policy: pull-push
+
+release:
+  image: node:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+  stage: release
+  needs:
+    - build
+  script:
+    - npx semantic-release
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - cjs
+      - mjs
+    policy: pull

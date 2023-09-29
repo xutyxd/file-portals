@@ -1,0 +1,14 @@
+
+{
+    "branches": [
+        "main",
+        {
+            "name": "develop",
+            "prerelease": "next",
+            "channel": "next"
+        }
+    ],
+    "plugins": [
+        "@semantic-release/npm"
+    ]
+}
