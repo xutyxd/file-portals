@@ -21,13 +21,17 @@ const servers = {
 };
 
 const portal = {
-    get: (file: string, path?: string, ) => {
+    get: (file: string, path?: string, name?: string) => {
         const reader = new NodeReader(path);
         const writer = new NodeWriter({ name: file });
 
         const peer = new FilePeer();
 
         const portal = new FilePortal(reader, writer, peer);
+
+        if (name) {
+            portal.name = name;
+        }
 
         return { reader, writer, peer, portal };
     }
@@ -43,48 +47,59 @@ describe('File portal class', () => {
 
             const filePortal = new FilePortal(reader, writer, peer);
 
-            expect(filePortal).toBeInstanceOf(FilePortal);
             filePortal.close();
+
+            expect(filePortal).toBeInstanceOf(FilePortal);
         });
     });
 
     describe('File portal files', () => {
-        it.only('should get files through the portal', async () => {
-            const { portal: portalA, peer: peerA, reader } = portal.get('test', assets);
+        it('should get files through the portal', async () => {
+            const { portal: portalA, peer: peerA } = portal.get('test', assets);
             const { portal: portalB, peer: peerB } = portal.get('test', assets);
-            console.log('A: ', { portalA, peerA });
-            console.log('B: ', { portalB, peerB });
-            console.log('Files: ', await reader.files());
             // Get offer
             const offer = await peerA.connect() as RTCSessionDescription;
-            console.log('Offer: ', offer);
             // Answer
             const answer = await peerB.connect(offer) as RTCSessionDescription;
-            console.log('Answer: ', answer);
             // Reply
             await peerA.connect(answer);
-            console.log('Connected!');
-
-            console.log('LocalA: ', peerA['peer'].localDescription);
-            console.log('RemoteA: ', peerA['peer'].remoteDescription);
-            console.log('LocalB: ', peerB['peer'].localDescription);
-            console.log('RemoteB: ', peerB['peer'].remoteDescription);
-
-            console.log('Pending A: ', peerA['peer'].pendingRemoteDescription);
-            console.log('Pending B: ', peerB['peer'].pendingRemoteDescription);
+            // Exchange candidates
             const candidatesA = await peerA.candidates.export();
-            console.log('CandidatesA: ', candidatesA);
             peerB.candidates.import(candidatesA);
-            console.log('Candidates exchanged!');
-            console.log('PeerA connected: ', peerA['peer'].connectionState);
-            console.log('PeerB connected: ', peerB['peer'].connectionState);
+            // console.log('Execution files: ', await portalA.files());
             const [ file ] = await portalA.files();
-            console.log('File: ', file);
-            expect(file.name).toBe('video.mp4');
-            expect(file.size).toBe(2097084);
 
             portalA.close();
             portalB.close();
+
+            expect(file.name).toBe('video.mp4');
+            expect(file.size).toBe(2097084);
+        });
+
+        it('should get files reusing file tunnel through the portal', async () => {
+            const { portal: portalA, peer: peerA } = portal.get('test', assets, 'portalA');
+            const { portal: portalB, peer: peerB } = portal.get('test', assets, 'portalB');
+            // Get offer
+            const offer = await peerA.connect() as RTCSessionDescription;
+            // Answer
+            const answer = await peerB.connect(offer) as RTCSessionDescription;
+            // Reply
+            await peerA.connect(answer);
+            // Exchange candidates
+            const candidatesA = await peerA.candidates.export();
+            peerB.candidates.import(candidatesA);
+            const files = await portalA.files();
+            const [ file ] = await portalA.files();
+            const [ fileAgain ] = await portalA.files();
+
+            portalA.close();
+            portalB.close();
+
+            expect(files.length).toBe(1);
+            expect(file.name).toBe('video.mp4');
+            expect(file.size).toBe(2097084);
+            expect(fileAgain.name).toBe('video.mp4');
+            expect(fileAgain.size).toBe(2097084);
         });
     });
 });

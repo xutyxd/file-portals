@@ -13,10 +13,13 @@ describe('File tunnel class', () => {
 
             const fileTunnel = new FileTunnel(channel);
 
-            expect(fileTunnel).toBeInstanceOf(FileTunnel);
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(fileTunnel).toBeInstanceOf(FileTunnel);
+            
         });
 
         it('should set label on instance', () => {
@@ -25,10 +28,12 @@ describe('File tunnel class', () => {
 
             const fileTunnel = new FileTunnel(channel);
 
-            expect(fileTunnel.label).toBe('channel');
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(fileTunnel.label).toBe('channel');
         });
 
         it('should set a promise to wait channel to be opened', () => {
@@ -37,10 +42,12 @@ describe('File tunnel class', () => {
 
             const fileTunnel = new FileTunnel(channel);
 
-            expect(channel.onopen).toBeInstanceOf(Function);
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(channel.onopen).toBeInstanceOf(Function);
         });
 
         it('should resolve opened promise when channel is opened', async () => {
@@ -56,10 +63,12 @@ describe('File tunnel class', () => {
                 channel.onopen && channel.onopen({ } as Event);
             });
 
-            expect(resolved).toBe(true);
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(resolved).toBe(true);
         });
 
         it('should handle querys', async () => {
@@ -71,14 +80,16 @@ describe('File tunnel class', () => {
             const query = new Promise((resolve) => {
                 fileTunnel.on.query.subscribe(resolve);
 
-                channel.onmessage && channel.onmessage({ data: 'query' } as MessageEvent);
+                channel.onmessage && channel.onmessage({ data: JSON.stringify({ method: 'query' }) } as MessageEvent);
             });
+
+            fileTunnel.close();
+            peer.close();
+            channel.close();
+            console.log('Tunnel closed!');
 
             expect.assertions(1);
             expect(query).resolves.not.toThrow();
-            fileTunnel.close();
-            peer.close();
-            console.log('Tunnel closed!');
         });
 
         it('should handle messages', async () => {
@@ -93,10 +104,12 @@ describe('File tunnel class', () => {
                 channel.onmessage && channel.onmessage({ data: 'test' } as MessageEvent);
             });
 
-            expect(message).toBe('test');
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(message).toBe('test');
         });
     });
 
@@ -115,11 +128,13 @@ describe('File tunnel class', () => {
             
             await fileTunnel['opened'];
 
-            expect(send).toBeCalledTimes(1);
-            expect(send).toBeCalledWith('data');
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
+
+            expect(send).toBeCalledTimes(1);
+            expect(send).toBeCalledWith('data');
         });
 
         it('should send data as object', async () => {
@@ -136,17 +151,19 @@ describe('File tunnel class', () => {
 
             await fileTunnel['opened'];
 
-            expect(send).toBeCalledTimes(1);
-            expect(send).toBeCalledWith(JSON.stringify({ test: 'data' }));
             fileTunnel.close();
             peer.close();
+            channel.close();
             console.log('Tunnel closed!');
             console.log('Tunnel closed!');
+
+            expect(send).toBeCalledTimes(1);
+            expect(send).toBeCalledWith(JSON.stringify({ test: 'data' }));
         });
     });
 
-    describe.skip('File tunnel query', () => {
-        it('should query data', () => {
+    describe('File tunnel query', () => {
+        it.skip('should query data', () => {
             const peer = new RTCPeerConnection();
             const channel = peer.createDataChannel('channel');
 
