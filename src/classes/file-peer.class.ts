@@ -2,8 +2,9 @@
 import { Subject } from 'rxjs';
 import { IFilePeer } from "../interfaces/file-peer.interface";
 import { FileTunnel } from "./file-tunnel.class";
-import { Methods, QueryParams, ResultMethods, SignalMessage } from '../types';
+import { Methods, ResultMethods, SignalMessage } from '../types';
 import { IFileTunnel } from '../interfaces/file-tunnel.interface';
+import { IReader, IWriter } from 'file-agents';
 
 export class FilePeer<T> implements IFilePeer<T> {
 
@@ -77,7 +78,7 @@ export class FilePeer<T> implements IFilePeer<T> {
 
     public call(method: Methods<T>) {
         const channel = this.peer.createDataChannel(JSON.stringify({ method }));
-        const tunnel = new FileTunnel<T, Methods<T>>(channel);
+        const tunnel = new FileTunnel<T, keyof IReader | keyof IWriter<T>>(channel);
 
         return tunnel;
     }

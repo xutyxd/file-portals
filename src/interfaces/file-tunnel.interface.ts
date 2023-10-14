@@ -4,7 +4,6 @@ import { Subject } from "rxjs";
 
 import { ResultMethods, QueryParams } from "../types";
 
-
 export interface IFileTunnel<Y, T extends (keyof IReader | keyof IWriter<Y>)> {
     label: string;
     on: {
