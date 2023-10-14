@@ -29,7 +29,6 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
         });
 
         channel.onmessage = ({ data }) => {
-            console.log('Data onmessage: ', data);
             try {
                 let result;
 
@@ -45,12 +44,10 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
     
                     result = parsed;
                 }
-                console.log('Sending message: ', result);
                 this.on.message.next(result as ReturnType<ResultMethods<Y, T>>);
             } catch(e) {
-                console.log('Error sending message: ', e);
+                console.log('Error handling message: ', e);
             }
-            
         }
     }
 
@@ -73,14 +70,13 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
         } else if(typeof data === 'object') {
             message = JSON.stringify(data);
         }
-        console.log('Sending message: ', data);
+
         await this.opened;
-        console.log('Channel opened...');
+
         this.channel.send(message as string);
     }
 
     public query(...params: QueryParams<Y, T>) {
-        
         return new Promise<Awaited<ReturnType<ResultMethods<Y, T>>>>((resolve) => {
             const subscription = this.on.message.subscribe((data) => {
                 const message = (() => {

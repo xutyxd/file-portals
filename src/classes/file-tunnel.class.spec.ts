@@ -6,54 +6,48 @@ import { FileTunnel } from "./file-tunnel.class";
 Object.assign(globalThis, wrtc);
 
 describe('File tunnel class', () => {
+
+    let peers: RTCPeerConnection[];
+    let channels: RTCDataChannel[];
+    let peer: RTCPeerConnection;
+    let channel: RTCDataChannel;
+
+    beforeEach(() => {
+        peer = new RTCPeerConnection();
+        channel = peer.createDataChannel('channel');
+        peers = [ peer ];
+        channels = [ channel ];
+    });
+
+    afterEach(async () => {
+        channels.forEach((channel) => channel.close());
+
+        peers.forEach((peer) => peer.close());
+    });
+
     describe('File tunnel instance', () => {
         it('should instance', () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const fileTunnel = new FileTunnel(channel);
-
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
 
             expect(fileTunnel).toBeInstanceOf(FileTunnel);
             
         });
 
         it('should set label on instance', () => {
-            const peer = new RTCPeerConnection();
+
             const channel = peer.createDataChannel('channel');
-
+            channels.push(channel);
             const fileTunnel = new FileTunnel(channel);
-
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
 
             expect(fileTunnel.label).toBe('channel');
         });
 
         it('should set a promise to wait channel to be opened', () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
-            const fileTunnel = new FileTunnel(channel);
-
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-
+            new FileTunnel(channel);
             expect(channel.onopen).toBeInstanceOf(Function);
         });
 
         it('should resolve opened promise when channel is opened', async () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const fileTunnel = new FileTunnel(channel);
 
             const opened = fileTunnel['opened'];
@@ -63,18 +57,10 @@ describe('File tunnel class', () => {
                 channel.onopen && channel.onopen({ } as Event);
             });
 
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-
             expect(resolved).toBe(true);
         });
 
         it('should handle querys', async () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const fileTunnel = new FileTunnel(channel);
 
             const query = new Promise((resolve) => {
@@ -83,19 +69,11 @@ describe('File tunnel class', () => {
                 channel.onmessage && channel.onmessage({ data: JSON.stringify({ method: 'query' }) } as MessageEvent);
             });
 
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-
             expect.assertions(1);
             expect(query).resolves.not.toThrow();
         });
 
         it('should handle messages', async () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const fileTunnel = new FileTunnel(channel);
 
             const message = await new Promise((resolve) => {
@@ -104,20 +82,12 @@ describe('File tunnel class', () => {
                 channel.onmessage && channel.onmessage({ data: 'test' } as MessageEvent);
             });
 
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-
             expect(message).toBe('test');
         });
     });
 
     describe('File tunnel send', () => {
         it('should send data as string', async () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const send = jest.fn();
             channel.send = send;
 
@@ -128,19 +98,11 @@ describe('File tunnel class', () => {
             
             await fileTunnel['opened'];
 
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-
             expect(send).toBeCalledTimes(1);
             expect(send).toBeCalledWith('data');
         });
 
         it('should send data as object', async () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
             const send = jest.fn();
             channel.send = send;
 
@@ -150,12 +112,6 @@ describe('File tunnel class', () => {
             channel.onopen && channel.onopen({ } as Event);
 
             await fileTunnel['opened'];
-
-            fileTunnel.close();
-            peer.close();
-            channel.close();
-            console.log('Tunnel closed!');
-            console.log('Tunnel closed!');
 
             expect(send).toBeCalledTimes(1);
             expect(send).toBeCalledWith(JSON.stringify({ test: 'data' }));

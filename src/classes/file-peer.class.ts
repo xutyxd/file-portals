@@ -3,8 +3,9 @@ import { Subject } from 'rxjs';
 import { IFilePeer } from "../interfaces/file-peer.interface";
 import { FileTunnel } from "./file-tunnel.class";
 import { Methods, QueryParams, ResultMethods, SignalMessage } from '../types';
+import { IFileTunnel } from '../interfaces/file-tunnel.interface';
 
-export class FilePeer<T> implements IFilePeer {
+export class FilePeer<T> implements IFilePeer<T> {
 
     private peer: RTCPeerConnection;
 
@@ -14,7 +15,7 @@ export class FilePeer<T> implements IFilePeer {
     private onCandidates: Promise<void>;
 
     public on = {
-        tunnel: new Subject<FileTunnel<T, any>>(),
+        tunnel: new Subject<IFileTunnel<T, any>>(),
         signal: new Subject<SignalMessage<T>>()
     }
 
@@ -45,7 +46,7 @@ export class FilePeer<T> implements IFilePeer {
             }
 
             const { channel } = event;
-            const tunnel = new FileTunnel(channel);
+            const tunnel = new FileTunnel<T, any>(channel);
 
             switch(tunnel.label) {
                 case 'signal':

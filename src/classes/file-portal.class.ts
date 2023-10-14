@@ -1,40 +1,36 @@
 import { IReader, IWriter } from "file-agents";
 import { IFilePortal } from "../interfaces/file-portal.interface";
-import { FilePeer } from "./file-peer.class";
-import { FileTunnel } from "./file-tunnel.class";
 import { Methods, ResultMethods } from "../types";
+import { IFilePeer } from "../interfaces/file-peer.interface";
+import { IFileTunnel } from "../interfaces/file-tunnel.interface";
 
 // type Tunnels = { signal?: FileTunnel, files?: FileTunnel, read?: FileTunnel };
 
 export class FilePortal<T> implements IFilePortal<T> {
 
-    private tunnel: { get: (label: Methods<T>, type: 'call' | 'response') => FileTunnel<T, any>, call: FileTunnel<T, any>[], response: FileTunnel<T, any>[] } = {
+    private tunnel = {
         get: (label: Methods<T>, type: 'call' | 'response') => {
-            console.log('Trying to get tunnel for label: ', label);
             let tunnel = this.tunnel[type].find((tunnel) => tunnel.label === label);
 
             const labels = this.tunnel[type].map(({ label }) => label);
-            console.log('Tunnel labels: ', labels);
             if (!tunnel) {
-                tunnel = this.peer[type](label as 'files' | 'read') as FileTunnel<T, any>;
+                tunnel = this.peer[type](label) as IFileTunnel<T, any>;
                 this.tunnel[type].push(tunnel);
             }
 
             return tunnel;
         },
-        call: [ ],
-        response: [ ]
+        call: [ ] as IFileTunnel<T, any>[],
+        response: [ ] as IFileTunnel<T, any>[]
     }
 
     public name = 'Portal';
 
     constructor(private reader: IReader,
                 private writer: IWriter<T>,
-                private peer: FilePeer<T>) {
+                private peer: IFilePeer<T>) {
         peer.on.tunnel.subscribe(async (tunnel) => {
             const method = tunnel.label;
-
-            console.log(`Tunnel on ${this.name} added with label: `, tunnel.label);
 
             if (method === 'signal') {
                 this.tunnel.call.push(tunnel);
@@ -70,37 +66,30 @@ export class FilePortal<T> implements IFilePortal<T> {
 
 
     public async files(): ReturnType<IReader['files']> {
-        const tunnel = this.tunnel.get('files', 'call') as FileTunnel<T, 'files'>;
+        const tunnel = this.tunnel.get('files', 'call') as IFileTunnel<T, 'files'>;
 
         return tunnel.query();
     }
 
     public async read(options: { start: number; end: number; }, file?: string | undefined): Promise<Blob> {
-        const tunnel = this.tunnel.get('read', 'call') as FileTunnel<T, 'read'>;
+        const tunnel = this.tunnel.get('read', 'call') as IFileTunnel<T, 'read'>;
 
         return tunnel.query(options, file);
     }
 
     public write(data: T, position: number, where?: { path?: string, name: string }): void | Promise<void> {
-        const tunnel = this.tunnel.get('write', 'call') as FileTunnel<T, 'write'>;
+        const tunnel = this.tunnel.get('write', 'call') as IFileTunnel<T, 'write'>;
 
         return tunnel.query(data, position, where);
     }
 
     public close(where?: { path?: string, name: string }) {
-        const tunnel = this.tunnel.get('write', 'call') as FileTunnel<T, 'close'>;
+        const tunnel = this.tunnel.get('write', 'call') as IFileTunnel<T, 'close'>;
 
         return tunnel.query(where);
     }
 
-    // public read(): ReturnType<IReader['read']> {
-    //     const tunnel = this.tunnel.get('read', 'call');
-
-    //     // await 
-
-    // }
-
-    // public close(): void {
-    //     this.peer.close();
-    // }
+    public async shutdown(): Promise<void> {
+        await this.peer.close();
+    }
 }

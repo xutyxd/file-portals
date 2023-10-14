@@ -1,9 +1,10 @@
 
-import { NodeReader, NodeWriter } from 'file-agents';
+import { IReader, IWriter, NodeReader, NodeWriter } from 'file-agents';
 import { FilePortal } from './file-portal.class';
 import { FilePeer } from './file-peer.class';
 // @ts-ignore
 import * as wrtc from 'wrtc';
+import { IFilePeer } from '../interfaces/file-peer.interface';
 
 Object.assign(globalThis, wrtc);
 
@@ -37,26 +38,38 @@ const portal = {
     }
 }
 describe('File portal class', () => {
-    // jest.setTimeout(60000);
+    type mockInstances = { reader: IReader, writer: IWriter<Buffer>, peer: IFilePeer<Buffer>, portal: FilePortal<Buffer> };
+
+    let A: mockInstances;
+    let B: mockInstances;
+
+    beforeEach(() => {
+        A = portal.get('test', assets, 'A');
+        B = portal.get('test', assets, 'B');
+    });
+
+    afterEach(() => {
+        const close = ({ peer, portal }: mockInstances) => {
+            peer.close();
+            portal.shutdown();
+        }
+
+        close(A);
+        close(B);
+    });
+    
     describe('File portal instance', () => {
         it('should instance', () => {
-            const reader = new NodeReader();
-            const writer = new NodeWriter({ name: 'test' });
+            const { portal } = A;
 
-            const peer = new FilePeer<Buffer>();
-
-            const filePortal = new FilePortal(reader, writer, peer);
-
-            filePortal.close();
-
-            expect(filePortal).toBeInstanceOf(FilePortal);
+            expect(portal).toBeInstanceOf(FilePortal);
         });
     });
 
     describe('File portal files', () => {
         it('should get files through the portal', async () => {
-            const { portal: portalA, peer: peerA } = portal.get('test', assets);
-            const { portal: portalB, peer: peerB } = portal.get('test', assets);
+            const { portal: portalA, peer: peerA } = A;
+            const { portal: portalB, peer: peerB } = B;
             // Get offer
             const offer = await peerA.connect() as RTCSessionDescription;
             // Answer
@@ -66,19 +79,16 @@ describe('File portal class', () => {
             // Exchange candidates
             const candidatesA = await peerA.candidates.export();
             peerB.candidates.import(candidatesA);
-            // console.log('Execution files: ', await portalA.files());
-            const [ file ] = await portalA.files();
 
-            portalA.close();
-            portalB.close();
+            const [ file ] = await portalA.files();
 
             expect(file.name).toBe('video.mp4');
             expect(file.size).toBe(2097084);
         });
 
         it('should get files reusing file tunnel through the portal', async () => {
-            const { portal: portalA, peer: peerA } = portal.get('test', assets, 'portalA');
-            const { portal: portalB, peer: peerB } = portal.get('test', assets, 'portalB');
+            const { portal: portalA, peer: peerA } = A;
+            const { portal: portalB, peer: peerB } = B;
             // Get offer
             const offer = await peerA.connect() as RTCSessionDescription;
             // Answer
@@ -91,9 +101,6 @@ describe('File portal class', () => {
             const files = await portalA.files();
             const [ file ] = await portalA.files();
             const [ fileAgain ] = await portalA.files();
-
-            portalA.close();
-            portalB.close();
 
             expect(files.length).toBe(1);
             expect(file.name).toBe('video.mp4');

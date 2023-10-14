@@ -2,6 +2,7 @@
 // @ts-ignore
 import * as wrtc from 'wrtc';
 import { FilePeer } from './file-peer.class';
+import { FileTunnel } from './file-tunnel.class';
 
 Object.assign(globalThis, wrtc);
 
@@ -30,6 +31,14 @@ describe('File peer class', () => {
             const filePeer = new FilePeer(servers);
 
             expect(filePeer).toBeInstanceOf(FilePeer);
+            filePeer.close();
+        });
+
+        it('should create signal tunnel on instance', () => {
+            const filePeer = new FilePeer();
+
+            expect(filePeer['tunnels'].all.length).toBe(1);
+            expect(filePeer['tunnels'].signal.self).toBeInstanceOf(FileTunnel);
             filePeer.close();
         });
     });
