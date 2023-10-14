@@ -25,7 +25,7 @@ const portal = {
         const reader = new NodeReader(path);
         const writer = new NodeWriter({ name: file });
 
-        const peer = new FilePeer();
+        const peer = new FilePeer<Buffer>();
 
         const portal = new FilePortal(reader, writer, peer);
 
@@ -43,7 +43,7 @@ describe('File portal class', () => {
             const reader = new NodeReader();
             const writer = new NodeWriter({ name: 'test' });
 
-            const peer = new FilePeer();
+            const peer = new FilePeer<Buffer>();
 
             const filePortal = new FilePortal(reader, writer, peer);
 

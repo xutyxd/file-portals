@@ -2,19 +2,20 @@
 import { Subject } from 'rxjs';
 import { IFilePeer } from "../interfaces/file-peer.interface";
 import { FileTunnel } from "./file-tunnel.class";
+import { Methods, QueryParams, ResultMethods, SignalMessage } from '../types';
 
-export class FilePeer implements IFilePeer {
+export class FilePeer<T> implements IFilePeer {
 
     private peer: RTCPeerConnection;
 
     private Candidates: RTCIceCandidate[] = [];
-    private tunnels: { all: FileTunnel<any>[], signal: { self: FileTunnel<any>, pair?: FileTunnel<any> } };
+    private tunnels: { all: FileTunnel<T, any>[], signal: { self: FileTunnel<T, any>, pair?: FileTunnel<T, any> } };
 
     private onCandidates: Promise<void>;
 
     public on = {
-        tunnel: new Subject<FileTunnel<any>>(),
-        signal: new Subject<string>()
+        tunnel: new Subject<FileTunnel<T, any>>(),
+        signal: new Subject<SignalMessage<T>>()
     }
 
     constructor(config?: RTCConfiguration) {
@@ -52,19 +53,32 @@ export class FilePeer implements IFilePeer {
                     break;
             }
 
+            tunnel.on.query.subscribe((data) => {
+                const params = data as any;
+                this.on.signal.next({ method: tunnel.label as Methods<T>, data: params });
+            });
+
             this.tunnels.all.push(tunnel);
             this.on.tunnel.next(tunnel);
+            
         }
     }
 
-    public response(method: 'files' | 'read') {
-        
+    public response(method: Methods<T>, data: Awaited<ReturnType<ResultMethods<T, typeof method>>>) {
+        const tunnel = this.tunnels.all.find(({ label }) => label === method);
+
+        if (!tunnel || !data) {
+            return;
+        }
+
+        tunnel.send(data);
     }
 
-    public call(method: 'files' | 'read') {
+    public call(method: Methods<T>) {
         const channel = this.peer.createDataChannel(JSON.stringify({ method }));
+        const tunnel = new FileTunnel<T, Methods<T>>(channel);
 
-        return new FileTunnel(channel);
+        return tunnel;
     }
 
     private async offer() {

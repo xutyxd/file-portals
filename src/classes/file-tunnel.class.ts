@@ -5,14 +5,14 @@ import { IFileTunnel } from "../interfaces/file-tunnel.interface";
 import { IReader, IWriter } from "file-agents";
 import { QueryParams, ResultMethods } from "../types";
 
-export class FileTunnel<T extends keyof IReader | keyof IWriter<ArrayBuffer>> implements IFileTunnel<T> {
+export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>> implements IFileTunnel<Y, T> {
 
     public readonly label: string;
     private opened: Promise<void>;
 
     public on = {
-        query: new Subject<QueryParams<T>>(),
-        message: new Subject<ReturnType<ResultMethods<T>>>()
+        query: new Subject<QueryParams<Y, T>>(),
+        message: new Subject<ReturnType<ResultMethods<Y, T>>>()
     }
 
     constructor(private channel: RTCDataChannel) {
@@ -46,7 +46,7 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter<ArrayBuffer>> im
                     result = parsed;
                 }
                 console.log('Sending message: ', result);
-                this.on.message.next(result as ReturnType<ResultMethods<T>>);
+                this.on.message.next(result as ReturnType<ResultMethods<Y, T>>);
             } catch(e) {
                 console.log('Error sending message: ', e);
             }
@@ -79,9 +79,9 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter<ArrayBuffer>> im
         this.channel.send(message as string);
     }
 
-    public query(...params: QueryParams<T>) {
+    public query(...params: QueryParams<Y, T>) {
         
-        return new Promise<Awaited<ReturnType<ResultMethods<T>>>>((resolve) => {
+        return new Promise<Awaited<ReturnType<ResultMethods<Y, T>>>>((resolve) => {
             const subscription = this.on.message.subscribe((data) => {
                 const message = (() => {
                     let message = data;
