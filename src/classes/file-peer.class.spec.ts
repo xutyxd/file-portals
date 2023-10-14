@@ -3,6 +3,7 @@
 import * as wrtc from 'wrtc';
 import { FilePeer } from './file-peer.class';
 import { FileTunnel } from './file-tunnel.class';
+import { IFilePeer } from '../interfaces/file-peer.interface';
 
 Object.assign(globalThis, wrtc);
 
@@ -19,27 +20,35 @@ const servers = {
 };
 
 describe('File peer class', () => {
+
+    let peer: IFilePeer<any>;
+
+    const get = (configuration?: typeof servers) => {
+        return peer = new FilePeer(configuration);
+    }
+
+    afterEach(async () => {
+        await peer.close();
+    });
+
     describe('File peer instance', () => {
         it('should instance', () => {
-            const filePeer = new FilePeer();
+            const filePeer = get();
 
             expect(filePeer).toBeInstanceOf(FilePeer);
-            filePeer.close();
         });
 
         it('should instance with configuration', () => {
-            const filePeer = new FilePeer(servers);
+            const filePeer = get(servers);
 
             expect(filePeer).toBeInstanceOf(FilePeer);
-            filePeer.close();
         });
 
         it('should create signal tunnel on instance', () => {
-            const filePeer = new FilePeer();
+            const filePeer = get();
 
             expect(filePeer['tunnels'].all.length).toBe(1);
             expect(filePeer['tunnels'].signal.self).toBeInstanceOf(FileTunnel);
-            filePeer.close();
         });
     });
 });

@@ -98,7 +98,14 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
         });
     }
 
-    public close() {
+    public async close() {
+        const closed = new Promise<void>((resolve) => {
+            this.channel.onclose = () => resolve();
+        });
+
         this.channel.close();
+        this.channel.dispatchEvent(new Event('close'));
+
+        await closed;
     }
 }

@@ -122,8 +122,12 @@ export class FilePeer<T> implements IFilePeer<T> {
         }
     }
 
-    public close(): void {
-        this.tunnels.all.forEach((tunnel) => tunnel.close());
-        this.peer.close();
+    public async close(): Promise<void> {
+        await Promise.all(this.tunnels.all.map((tunnel) => tunnel.close()));
+
+        await new Promise<void>((resolve) => {
+            this.peer.onconnectionstatechange = () => resolve();
+            this.peer.close();
+        });
     }
 }
