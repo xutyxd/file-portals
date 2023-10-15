@@ -12,7 +12,6 @@ export class FilePortal<T> implements IFilePortal<T> {
         get: (label: Methods<T>, type: 'call' | 'response') => {
             let tunnel = this.tunnel[type].find((tunnel) => tunnel.label === label);
 
-            const labels = this.tunnel[type].map(({ label }) => label);
             if (!tunnel) {
                 tunnel = this.peer[type](label) as IFileTunnel<T, any>;
                 this.tunnel[type].push(tunnel);
@@ -25,10 +24,13 @@ export class FilePortal<T> implements IFilePortal<T> {
     }
 
     public name = 'Portal';
+    public opened = false;
+    public opening: Promise<void>;
 
     constructor(private reader: IReader,
                 private writer: IWriter<T>,
                 private peer: IFilePeer<T>) {
+        this.opening = peer.opening.then(() => { this.opened = true });
         peer.on.tunnel.subscribe(async (tunnel) => {
             const method = tunnel.label;
 
@@ -73,7 +75,7 @@ export class FilePortal<T> implements IFilePortal<T> {
 
     public async read(options: { start: number; end: number; }, file?: string | undefined): Promise<Blob> {
         const tunnel = this.tunnel.get('read', 'call') as IFileTunnel<T, 'read'>;
-
+        
         return tunnel.query(options, file);
     }
 

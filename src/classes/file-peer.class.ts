@@ -15,6 +15,8 @@ export class FilePeer<T> implements IFilePeer<T> {
 
     private onCandidates: Promise<void>;
 
+    public opened = false;
+    public opening: Promise<void>;
     public on = {
         tunnel: new Subject<IFileTunnel<T, any>>(),
         signal: new Subject<SignalMessage<T>>()
@@ -34,7 +36,7 @@ export class FilePeer<T> implements IFilePeer<T> {
 
         const signal = peer.createDataChannel('signal');
         const self = new FileTunnel(signal);
-
+        this.opening = self.opening.then(() => { this.opened = true });
         this.tunnels = {
             all: [ self ],
             signal: { self }
@@ -45,7 +47,7 @@ export class FilePeer<T> implements IFilePeer<T> {
             if (!event.channel) {
                 return;
             }
-
+            
             const { channel } = event;
             const tunnel = new FileTunnel<T, any>(channel);
 
@@ -132,3 +134,4 @@ export class FilePeer<T> implements IFilePeer<T> {
         });
     }
 }
+

@@ -8,7 +8,8 @@ import { QueryParams, ResultMethods } from "../types";
 export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>> implements IFileTunnel<Y, T> {
 
     public readonly label: string;
-    private opened: Promise<void>;
+    public opened = false;
+    public opening: Promise<void>;
 
     public on = {
         query: new Subject<QueryParams<Y, T>>(),
@@ -23,10 +24,9 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
             } catch(e) { }
             return method;
         })();
-
-        this.opened = new Promise<void>((resolve) => {
+        this.opening = new Promise<void>((resolve) => {
             channel.onopen = () => resolve();
-        });
+        }).then(() => { this.opened = true });
 
         channel.onmessage = ({ data }) => {
             try {
@@ -46,7 +46,6 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
                 }
                 this.on.message.next(result as ReturnType<ResultMethods<Y, T>>);
             } catch(e) {
-                console.log('Error handling message: ', e);
             }
         }
     }
@@ -70,8 +69,11 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
         } else if(typeof data === 'object') {
             message = JSON.stringify(data);
         }
+        const opened = this.opened || this.channel.readyState === 'open';
 
-        await this.opened;
+        if (!opened) {
+            await this.opening;
+        }
 
         this.channel.send(message as string);
     }

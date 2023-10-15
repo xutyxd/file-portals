@@ -35,7 +35,13 @@
     "web",
     "node",
     "rtc",
-    "webRTC"
+    "webRTC",
+    "filesystem",
+    "files",
+    "fs",
+    "commonjs",
+    "es6",
+    "wrtc"
   ],
   "author": "XutyXD",
   "license": "ISC",

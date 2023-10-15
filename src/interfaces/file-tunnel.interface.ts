@@ -6,6 +6,8 @@ import { ResultMethods, QueryParams } from "../types";
 
 export interface IFileTunnel<Y, T extends (keyof IReader | keyof IWriter<Y>)> {
     label: string;
+    opened: boolean;
+    opening: Promise<void>;
     on: {
         query: Subject<QueryParams<Y, T>>,
         message: Subject<ReturnType<ResultMethods<Y, T>>>

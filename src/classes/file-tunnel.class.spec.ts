@@ -50,9 +50,9 @@ describe('File tunnel class', () => {
         it('should resolve opened promise when channel is opened', async () => {
             const fileTunnel = new FileTunnel(channel);
 
-            const opened = fileTunnel['opened'];
+            const opening = fileTunnel['opening'];
             const resolved = await new Promise((resolve) => {
-                opened.then(() => resolve(true))
+                opening.then(() => resolve(true))
                       .catch(() => resolve(false));
                 channel.onopen && channel.onopen({ } as Event);
             });
@@ -96,7 +96,7 @@ describe('File tunnel class', () => {
             fileTunnel.send('data');
             channel.onopen && channel.onopen({ } as Event);
             
-            await fileTunnel['opened'];
+            await fileTunnel['opening'];
 
             expect(send).toBeCalledTimes(1);
             expect(send).toBeCalledWith('data');
@@ -111,22 +111,10 @@ describe('File tunnel class', () => {
             fileTunnel.send({ test: 'data' });
             channel.onopen && channel.onopen({ } as Event);
 
-            await fileTunnel['opened'];
+            await fileTunnel['opening'];
 
             expect(send).toBeCalledTimes(1);
             expect(send).toBeCalledWith(JSON.stringify({ test: 'data' }));
-        });
-    });
-
-    describe('File tunnel query', () => {
-        it.skip('should query data', () => {
-            const peer = new RTCPeerConnection();
-            const channel = peer.createDataChannel('channel');
-
-            const send = jest.fn();
-            channel.send = send;
-
-            const fileTunnel = new FileTunnel(channel);
         });
     });
 });

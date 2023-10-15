@@ -4,6 +4,8 @@ import { IFileTunnel } from "./file-tunnel.interface";
 
 
 export interface IFilePeer<T> {
+    opened: boolean;
+    opening: Promise<void>;
     on: {
         tunnel: Subject<IFileTunnel<T, any>>,
         signal: Subject<SignalMessage<T>>
