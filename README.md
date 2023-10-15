@@ -74,3 +74,36 @@ const portal = new FilePortal(reader, writer, peerA);
 ``` ts
 const files = await portalA.files();
 ```
+
+### Read from file from the other portal
+
+``` ts
+const [{ uuid }] = await portalA.files();
+const readed = await portalA.read(uuid, { start: 0, end: 6 });
+const text = await readed.text();
+```
+
+### Create a writable on the other portal
+
+``` ts
+const writable = await portalA.create({ name: 'file.txt', size: 6 });
+```
+
+### Write on the file in the other side
+
+```ts
+const text = 'text';
+const writable = await portalA.create({ name: 'file.txt', size: text.length });
+
+await portalA.write(writable, new Blob(text.split('')), 0);
+```
+
+### Close writable
+
+```ts
+const text = 'text';
+const writable = await portalA.create({ name: 'file.txt', size: text.length });
+
+await portalA.write(writable, new Blob(text.split('')), 0);
+await portalA.close(writable);
+```
