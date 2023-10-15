@@ -22,11 +22,11 @@ const servers = {
 };
 
 const portal = {
-    get: async (file: string, path?: string, name?: string) => {
+    get: async (path?: string, name?: string) => {
         const reader = new NodeReader(path);
-        const writer = new NodeWriter({ name: file });
+        const writer = new NodeWriter();
 
-        const peer = new FilePeer<Buffer>();
+        const peer = new FilePeer();
 
         const portal = new FilePortal(reader, writer, peer);
 
@@ -36,7 +36,7 @@ const portal = {
 
         return { reader, writer, peer, portal };
     },
-    connect: async (peerA: IFilePeer<Buffer>, peerB: IFilePeer<Buffer>) => {
+    connect: async (peerA: IFilePeer, peerB: IFilePeer) => {
         // Get offer
         const offer = await peerA.connect() as RTCSessionDescription;
         // Answer
@@ -53,14 +53,14 @@ const portal = {
     }
 }
 describe('File portal class', () => {
-    type mockInstances = { reader: IReader, writer: IWriter<Buffer>, peer: IFilePeer<Buffer>, portal: FilePortal<Buffer> };
+    type mockInstances = { reader: IReader, writer: IWriter, peer: IFilePeer, portal: FilePortal };
 
     let A: mockInstances;
     let B: mockInstances;
 
     beforeEach(async () => {
-        A = await portal.get('test', `${assets}/peer-a`, 'A');
-        B = await portal.get('test', `${assets}/peer-b`, 'B');
+        A = await portal.get(`${assets}/peer-a`, 'A');
+        B = await portal.get(`${assets}/peer-b`, 'B');
 
         await portal.connect(A.peer, B.peer);
     });
@@ -119,10 +119,59 @@ describe('File portal class', () => {
 
             const [ { uuid } ] = await portal.files();
 
-            const readed = await portal.read({ start: 0, end: 10 }, uuid);
+            const readed = await portal.read(uuid, { start: 0, end: 10 });
             const text = await readed.text();
 
             expect(text).toBe('peer-b');
+        });
+
+        it('should read file from portal without uuid', async () => {
+
+            const { portal } = A;
+
+            const [ { uuid } ] = await portal.files();
+
+            const readedA = await portal.read(uuid, { start: 0, end: 3 });
+            const readedB = await portal.read(uuid, { start: 3, end: 6 });
+            const textA = await readedA.text();
+            const textB = await readedB.text();
+
+            expect(textA + textB).toBe('peer-b');
+        });
+    });
+
+    describe('File portal create', () => {
+        it('should create a file', async () => {
+            const { portal } = A;
+
+            const file = await portal.create({ path: 'assets/files/peer-b', name: 'test.file', size: 6 });
+
+            expect(file).toBeTruthy();
+        });
+    });
+
+    describe('File portal write', () => {
+        it('should write a file', async () => {
+            const { portal } = A;
+
+            const file = await portal.create({ path: './assets/files/peer-b', name: 'test.write', size: 6 });
+            const text = 'peer-a';
+            const blob = new Blob(text.split(''));
+            await portal.write(file, blob, 0);
+            expect(file).toBeTruthy();
+        });
+    });
+
+    describe('File portal close', () => {
+        it('should close a file', async () => {
+            const { portal } = A;
+
+            const file = await portal.create({ path: './assets/files/peer-b', name: 'test.write', size: 6 });
+            const text = 'peer-a';
+            const blob = new Blob(text.split(''));
+            await portal.write(file, blob, 0);
+            await portal.close(file);
+            expect(file).toBeTruthy();
         });
     });
 });

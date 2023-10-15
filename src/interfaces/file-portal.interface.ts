@@ -1,6 +1,6 @@
 import { IReader, IWriter } from "file-agents";
 
-export interface IFilePortal<T> extends IReader, IWriter<T> {
+export interface IFilePortal extends IReader, IWriter {
     opened: boolean;
     opening: Promise<void>;
     shutdown(): Promise<void> | void;

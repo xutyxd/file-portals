@@ -3,16 +3,16 @@ import { Methods, ResultMethods, SignalMessage } from "../types";
 import { IFileTunnel } from "./file-tunnel.interface";
 
 
-export interface IFilePeer<T> {
+export interface IFilePeer {
     opened: boolean;
     opening: Promise<void>;
     on: {
-        tunnel: Subject<IFileTunnel<T, any>>,
-        signal: Subject<SignalMessage<T>>
+        tunnel: Subject<IFileTunnel<any>>,
+        signal: Subject<SignalMessage>
     }
     connect(offer?: RTCSessionDescription): Promise<RTCSessionDescriptionInit | undefined>;
-    call(method: Methods<T>): IFileTunnel<T, typeof method>;
-    response(method: Methods<T>, data: Awaited<ReturnType<ResultMethods<T, typeof method>>>): void;    
+    call(method: Methods): IFileTunnel<typeof method>;
+    response(method: Methods, data: Awaited<ReturnType<ResultMethods<typeof method>>>): void;    
     candidates: {
         import: (candidates: RTCIceCandidate | RTCIceCandidate[]) => void,
         export: () => Promise<RTCIceCandidate[]>

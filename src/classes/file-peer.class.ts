@@ -6,20 +6,20 @@ import { Methods, ResultMethods, SignalMessage } from '../types';
 import { IFileTunnel } from '../interfaces/file-tunnel.interface';
 import { IReader, IWriter } from 'file-agents';
 
-export class FilePeer<T> implements IFilePeer<T> {
+export class FilePeer implements IFilePeer {
 
     private peer: RTCPeerConnection;
 
     private Candidates: RTCIceCandidate[] = [];
-    private tunnels: { all: FileTunnel<T, any>[], signal: { self: FileTunnel<T, any>, pair?: FileTunnel<T, any> } };
+    private tunnels: { all: FileTunnel<any>[], signal: { self: FileTunnel<any>, pair?: FileTunnel<any> } };
 
     private onCandidates: Promise<void>;
 
     public opened = false;
     public opening: Promise<void>;
     public on = {
-        tunnel: new Subject<IFileTunnel<T, any>>(),
-        signal: new Subject<SignalMessage<T>>()
+        tunnel: new Subject<IFileTunnel<any>>(),
+        signal: new Subject<SignalMessage>()
     }
 
     constructor(config?: RTCConfiguration) {
@@ -49,7 +49,7 @@ export class FilePeer<T> implements IFilePeer<T> {
             }
             
             const { channel } = event;
-            const tunnel = new FileTunnel<T, any>(channel);
+            const tunnel = new FileTunnel<any>(channel);
 
             switch(tunnel.label) {
                 case 'signal':
@@ -59,7 +59,7 @@ export class FilePeer<T> implements IFilePeer<T> {
 
             tunnel.on.query.subscribe((data) => {
                 const params = data as any;
-                this.on.signal.next({ method: tunnel.label as Methods<T>, data: params });
+                this.on.signal.next({ method: tunnel.label as Methods, data: params });
             });
 
             this.tunnels.all.push(tunnel);
@@ -68,19 +68,19 @@ export class FilePeer<T> implements IFilePeer<T> {
         }
     }
 
-    public response(method: Methods<T>, data: Awaited<ReturnType<ResultMethods<T, typeof method>>>) {
+    public response(method: Methods, data: Awaited<ReturnType<ResultMethods<typeof method>>>) {
         const tunnel = this.tunnels.all.find(({ label }) => label === method);
 
-        if (!tunnel || !data) {
+        if (!tunnel) {
             return;
         }
 
-        tunnel.send(data);
+        tunnel.send(data || { });
     }
 
-    public call(method: Methods<T>) {
+    public call(method: Methods) {
         const channel = this.peer.createDataChannel(JSON.stringify({ method }));
-        const tunnel = new FileTunnel<T, keyof IReader | keyof IWriter<T>>(channel);
+        const tunnel = new FileTunnel<keyof IReader | keyof IWriter>(channel);
 
         return tunnel;
     }

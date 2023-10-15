@@ -1,4 +1,4 @@
 
 import { IWriter } from "file-agents";
 
-export type WriteResult<Y, T extends keyof IWriter<Y>> = IWriter<Y>[T];
+export type WriteResult<T extends keyof IWriter> = IWriter[T];

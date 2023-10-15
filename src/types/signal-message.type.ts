@@ -1,11 +1,13 @@
 import { QueryParams } from "./query-params.type"
 
-export type SignalMessage<T> = {
-    method: 'read', data: QueryParams<T, 'read'>
+export type SignalMessage = {
+    method: 'read', data: QueryParams<'read'>
 } | {
-    method: 'files', data: QueryParams<T, 'files'>
+    method: 'files', data: QueryParams<'files'>
 } | {
-    method: 'write', data: QueryParams<T, 'write'>
+    method: 'create', data: QueryParams<'create'>
 } | {
-    method: 'close', data: QueryParams<T, 'close'>
+    method: 'write', data: QueryParams<'write'>
+} | {
+    method: 'close', data: QueryParams<'close'>
 }

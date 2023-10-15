@@ -5,15 +5,15 @@ import { IFileTunnel } from "../interfaces/file-tunnel.interface";
 import { IReader, IWriter } from "file-agents";
 import { QueryParams, ResultMethods } from "../types";
 
-export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>> implements IFileTunnel<Y, T> {
+export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFileTunnel<T> {
 
     public readonly label: string;
     public opened = false;
     public opening: Promise<void>;
 
     public on = {
-        query: new Subject<QueryParams<Y, T>>(),
-        message: new Subject<ReturnType<ResultMethods<Y, T>>>()
+        query: new Subject<QueryParams<T>>(),
+        message: new Subject<ReturnType<ResultMethods<T>>>()
     }
 
     constructor(private channel: RTCDataChannel) {
@@ -38,13 +38,18 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
                     const parsed = this.parse(data);
                     const { method, params } = parsed;
     
+                    if (method === 'error') {
+
+                    }
+
                     if (method === 'query') {
                         return this.on.query.next(params);
                     }
     
                     result = parsed;
                 }
-                this.on.message.next(result as ReturnType<ResultMethods<Y, T>>);
+
+                this.on.message.next(result as ReturnType<ResultMethods<T>>);
             } catch(e) {
             }
         }
@@ -78,8 +83,8 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
         this.channel.send(message as string);
     }
 
-    public query(...params: QueryParams<Y, T>) {
-        return new Promise<Awaited<ReturnType<ResultMethods<Y, T>>>>((resolve) => {
+    public query(...params: QueryParams<T>) {
+        return new Promise<Awaited<ReturnType<ResultMethods<T>>>>(async (resolve) => {
             const subscription = this.on.message.subscribe((data) => {
                 const message = (() => {
                     let message = data;
@@ -95,8 +100,20 @@ export class FileTunnel<Y, T extends keyof IReader | keyof IWriter<ArrayBuffer>>
 
                 subscription.unsubscribe();
             });
+            const cleaned = params.filter((param) => param !== undefined);
+            const transformed = await Promise.all(params.map(async (param) => {
+                let paramTransformed: any = param;
+                if (param instanceof Blob) {
+                    const arrayBuffer = await param.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer)
+                    const array = [...uint8Array]
 
-            this.send({ method: 'query', params });
+                    paramTransformed = array;
+                }
+                
+                return paramTransformed;
+            }));
+            this.send({ method: 'query', params: transformed });
         });
     }
 

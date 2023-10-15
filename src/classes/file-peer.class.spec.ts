@@ -21,7 +21,7 @@ const servers = {
 
 describe('File peer class', () => {
 
-    let peer: IFilePeer<any>;
+    let peer: IFilePeer;
 
     const get = (configuration?: typeof servers) => {
         return peer = new FilePeer(configuration);
