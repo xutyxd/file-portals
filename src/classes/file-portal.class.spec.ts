@@ -36,7 +36,7 @@ const portal = {
 
         return { reader, writer, peer, portal };
     },
-    connect: async (peerA: IFilePeer, peerB: IFilePeer) => {
+    connect: async (peerA: FilePeer, peerB: FilePeer) => {
         // Get offer
         const offer = await peerA.connect() as RTCSessionDescription;
         // Answer
@@ -53,7 +53,7 @@ const portal = {
     }
 }
 describe('File portal class', () => {
-    type mockInstances = { reader: IReader, writer: IWriter, peer: IFilePeer, portal: FilePortal };
+    type mockInstances = { reader: IReader, writer: IWriter, peer: FilePeer, portal: FilePortal };
 
     let A: mockInstances;
     let B: mockInstances;
@@ -91,7 +91,7 @@ describe('File portal class', () => {
         it('should get files through the portal', async () => {
             const { portal } = A;
 
-            const [ , file ] = await portal.files();
+            const [ , , file ] = await portal.files();
 
             expect(file.name).toBe('video-b.mp4');
             expect(file.size).toBe(2097084);
@@ -101,10 +101,11 @@ describe('File portal class', () => {
             const { portal } = A;
 
             const files = await portal.files();
-            const [ , file ] = await portal.files();
-            const [ , fileAgain ] = await portal.files();
+            console.log('Files: ', files);
+            const [ , , file ] = await portal.files();
+            const [ , , fileAgain ] = await portal.files();
 
-            expect(files.length).toBe(2);
+            expect(files.length).toBe(3);
             expect(file.name).toBe('video-b.mp4');
             expect(file.size).toBe(2097084);
             expect(fileAgain.name).toBe('video-b.mp4');
@@ -117,7 +118,7 @@ describe('File portal class', () => {
 
             const { portal } = A;
 
-            const [ { uuid } ] = await portal.files();
+            const [ , { uuid } ] = await portal.files();
 
             const readed = await portal.read(uuid, { start: 0, end: 10 });
             const text = await readed.text();
@@ -125,11 +126,25 @@ describe('File portal class', () => {
             expect(text).toBe('peer-b');
         });
 
-        it('should read file from portal without uuid', async () => {
+        it('should read file from portal sequentially', async () => {
 
             const { portal } = A;
 
-            const [ { uuid } ] = await portal.files();
+            const [ , { uuid } ] = await portal.files();
+
+            const readedA = await portal.read(uuid, { start: 0, end: 3 });
+            const readedB = await portal.read(uuid, { start: 3, end: 6 });
+            const textA = await readedA.text();
+            const textB = await readedB.text();
+
+            expect(textA + textB).toBe('peer-b');
+        });
+
+        it('should read file from portal in parallel', async () => {
+
+            const { portal } = A;
+
+            const [ , { uuid } ] = await portal.files();
 
             const readedA = await portal.read(uuid, { start: 0, end: 3 });
             const readedB = await portal.read(uuid, { start: 3, end: 6 });

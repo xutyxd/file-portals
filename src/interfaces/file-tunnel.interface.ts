@@ -13,6 +13,6 @@ export interface IFileTunnel<T extends (keyof IReader | keyof IWriter)> {
         message: Subject<ReturnType<ResultMethods<T>>>
     }
     send(data: Blob | string | ArrayBuffer | Object): Promise<void>
-    query(...params: QueryParams<T>): Promise<Awaited<ReturnType<ResultMethods<T>>>>
+    query(method: T, ...params: QueryParams<T>): Promise<Awaited<ReturnType<ResultMethods<T>>>>
     close(): Promise<void> | void;
 }

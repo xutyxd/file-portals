@@ -1,13 +1,13 @@
 import { QueryParams } from "./query-params.type"
 
 export type SignalMessage = {
-    method: 'read', data: QueryParams<'read'>
+    uuid: string, method: 'read', data: QueryParams<'read'>
 } | {
-    method: 'files', data: QueryParams<'files'>
+    uuid: string, method: 'files', data: QueryParams<'files'>
 } | {
-    method: 'create', data: QueryParams<'create'>
+    uuid: string, method: 'create', data: QueryParams<'create'>
 } | {
-    method: 'write', data: QueryParams<'write'>
+    uuid: string, method: 'write', data: QueryParams<'write'>
 } | {
-    method: 'close', data: QueryParams<'close'>
+    uuid: string, method: 'close', data: QueryParams<'close'>
 }

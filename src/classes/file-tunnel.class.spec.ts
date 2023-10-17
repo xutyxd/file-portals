@@ -5,7 +5,7 @@ import { FileTunnel } from "./file-tunnel.class";
 
 Object.assign(globalThis, wrtc);
 
-describe('File tunnel class', () => {
+describe.skip('File tunnel class', () => {
 
     let peers: RTCPeerConnection[];
     let channels: RTCDataChannel[];

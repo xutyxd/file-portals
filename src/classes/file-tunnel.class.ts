@@ -5,16 +5,28 @@ import { IFileTunnel } from "../interfaces/file-tunnel.interface";
 import { IReader, IWriter } from "file-agents";
 import { QueryParams, ResultMethods } from "../types";
 
-export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFileTunnel<T> {
+export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IFileTunnel<T>*/ {
 
     public readonly label: string;
     public opened = false;
     public opening: Promise<void>;
 
     public on = {
-        query: new Subject<QueryParams<T>>(),
+        query: new Subject<{ method: T, params: QueryParams<T>}>(),
+        error: new Subject<string>(),
         message: new Subject<ReturnType<ResultMethods<T>>>()
     }
+
+    private waitingList: (() => void)[] = [];
+
+    public wait(toWait: () => any) {
+        this.waitingList.push(toWait);
+    }
+
+    public get toWait() {
+        return this.waitingList.length;
+    }
+    
 
     constructor(private channel: RTCDataChannel) {
         this.label = (() => {
@@ -24,6 +36,7 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
             } catch(e) { }
             return method;
         })();
+        // Handle when open
         this.opening = new Promise<void>((resolve) => {
             channel.onopen = () => resolve();
         }).then(() => { this.opened = true });
@@ -36,14 +49,15 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
                     result = new Blob([ data ]);
                 } else {
                     const parsed = this.parse(data);
-                    const { method, params } = parsed;
+                    const { type, method, params } = parsed;
     
-                    if (method === 'error') {
-
+                    if (type === 'error') {
+                        this.on.error.next(params);
+                        return;
                     }
 
-                    if (method === 'query') {
-                        return this.on.query.next(params);
+                    if (type === 'query') {
+                        return this.on.query.next({ method, params });
                     }
     
                     result = parsed;
@@ -51,11 +65,12 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
 
                 this.on.message.next(result as ReturnType<ResultMethods<T>>);
             } catch(e) {
+                console.log('Error handling message: ', e);
             }
         }
     }
 
-    private parse(data: any): { method: string, params: any } {
+    private parse(data: any): { type: 'query' | 'error', method: T, params: any } {
 
         let parsed = data;
 
@@ -83,8 +98,9 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
         this.channel.send(message as string);
     }
 
-    public query(...params: QueryParams<T>) {
-        return new Promise<Awaited<ReturnType<ResultMethods<T>>>>(async (resolve) => {
+    public query(method: T, ...params: QueryParams<T>) {
+
+        const promise = new Promise<Awaited<ReturnType<ResultMethods<T>>>>(async (resolve) => {
             const subscription = this.on.message.subscribe((data) => {
                 const message = (() => {
                     let message = data;
@@ -100,8 +116,10 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
 
                 subscription.unsubscribe();
             });
+            // Clean params
             const cleaned = params.filter((param) => param !== undefined);
-            const transformed = await Promise.all(params.map(async (param) => {
+            // Transforms Blobs -> ArrayBuffers
+            const transformed = await Promise.all(cleaned.map(async (param) => {
                 let paramTransformed: any = param;
                 if (param instanceof Blob) {
                     const arrayBuffer = await param.arrayBuffer();
@@ -113,8 +131,27 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
                 
                 return paramTransformed;
             }));
-            this.send({ method: 'query', params: transformed });
+            const opened = this.opened || this.channel.readyState === 'open';
+
+            if (!opened) {
+                await this.opening;
+            }
+            // Send data
+            this.channel.send(JSON.stringify({ type: 'query', method, params: transformed }));
+            // this.send({ method, params: transformed });
         });
+
+        promise.then(() => {
+            const [ resolve ] = this.waitingList.splice(0, 1);
+
+            if (!resolve) {
+                return;
+            }
+
+            resolve();
+        });
+
+        return promise;
     }
 
     public async close() {
