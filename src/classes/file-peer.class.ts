@@ -4,24 +4,23 @@ import { IFilePeer } from "../interfaces/file-peer.interface";
 import { FileTunnel } from "./file-tunnel.class";
 import { Methods, QueryParams, ResultMethods, SignalMessage } from '../types';
 import { IFileTunnel } from '../interfaces/file-tunnel.interface';
-import { IReader, IWriter } from 'file-agents';
 
-export class FilePeer /*implements IFilePeer*/ {
+export class FilePeer implements IFilePeer {
 
     private peer: RTCPeerConnection;
 
     private Candidates: RTCIceCandidate[] = [];
     private tunnels = {
-        call: [] as FileTunnel<any>[],
-        response: [] as FileTunnel<any>[],
-        get: async () => {
+        call: [] as IFileTunnel<any>[],
+        response: [] as IFileTunnel<any>[],
+        get: () => {
             const tunnels = [ ...this.tunnels.call ];
             const [ tunnel ] = tunnels.sort((a, b) => a.toWait - b.toWait);
 
-            let result: FileTunnel<any> | Promise<FileTunnel<any>> = tunnel;
+            let result: IFileTunnel<any> | Promise<IFileTunnel<any>> = tunnel;
 
-            if (tunnel.toWait) {
-                result = new Promise<FileTunnel<any>>((resolve) => {
+            if (tunnel.locked) {
+                result = new Promise<IFileTunnel<any>>((resolve) => {
                     tunnel.wait(() => resolve(tunnel));
                 });
             }
@@ -32,10 +31,8 @@ export class FilePeer /*implements IFilePeer*/ {
 
     private onCandidates: Promise<void>;
 
-    // public opened = false;
     public opening: Promise<void>;
     public on = {
-        tunnel: new Subject<IFileTunnel<any>>(),
         query: new Subject<SignalMessage>()
     }
 
@@ -65,7 +62,6 @@ export class FilePeer /*implements IFilePeer*/ {
             }
         }
 
-        // const signal = peer.createDataChannel('signal');
         this.opening = new Promise((resolve) => {
             this.peer.onconnectionstatechange = () => {
                 if (this.peer.connectionState !== 'connected') {
@@ -75,8 +71,6 @@ export class FilePeer /*implements IFilePeer*/ {
                 resolve();
             }
         });
-        // const self = new FileTunnel(signal);
-        // this.opening = self.opening.then(() => { this.opened = true });
 
         // Handle channels
         peer.ondatachannel = (event) => {
@@ -96,7 +90,7 @@ export class FilePeer /*implements IFilePeer*/ {
         }
     }
 
-    public response(uuid: string, method: Methods, data: Awaited<ReturnType<ResultMethods<typeof method>>>) {
+    public response<T extends Methods>(uuid: string, data: Awaited<ReturnType<ResultMethods<T>>>) {
         const tunnel = this.tunnels.response.find(({ label }) => label === uuid);
 
         if (!tunnel) {
@@ -108,15 +102,27 @@ export class FilePeer /*implements IFilePeer*/ {
 
     public async call<T extends Methods>(method: T, ...params: QueryParams<T>) {
 
-        const tunnel = await this.tunnels.get() as FileTunnel<T>;
+        let tunnel = this.tunnels.get();
 
-        const response = await tunnel.query.apply(tunnel, [method, ...params]);
+        if (tunnel instanceof FileTunnel) {
+            tunnel.lock();
+        }
 
+        if (tunnel instanceof Promise) {
+            tunnel = await tunnel;
+            tunnel.lock();
+        }
+
+        let response;
+        try {
+            response = await tunnel.query.apply(tunnel, [method, ...params]);
+        } catch(e) {
+            throw e;
+        } finally {
+            tunnel.free();
+        }
+        
         return response;
-        // const channel = this.peer.createDataChannel(JSON.stringify({ method }));
-        // const tunnel = new FileTunnel<keyof IReader | keyof IWriter>(channel);
-
-        // return tunnel;
     }
 
     private async offer() {

@@ -5,7 +5,7 @@ import { FileTunnel } from "./file-tunnel.class";
 
 Object.assign(globalThis, wrtc);
 
-describe.skip('File tunnel class', () => {
+describe('File tunnel class', () => {
 
     let peers: RTCPeerConnection[];
     let channels: RTCDataChannel[];
@@ -66,7 +66,7 @@ describe.skip('File tunnel class', () => {
             const query = new Promise((resolve) => {
                 fileTunnel.on.query.subscribe(resolve);
 
-                channel.onmessage && channel.onmessage({ data: JSON.stringify({ method: 'query' }) } as MessageEvent);
+                channel.onmessage && channel.onmessage({ data: JSON.stringify({ type: 'query' }) } as MessageEvent);
             });
 
             expect.assertions(1);

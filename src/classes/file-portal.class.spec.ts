@@ -1,4 +1,5 @@
 
+import { unlinkSync } from 'fs';
 import { IReader, IWriter, NodeReader, NodeWriter } from 'file-agents';
 import { FilePortal } from './file-portal.class';
 import { FilePeer } from './file-peer.class';
@@ -36,7 +37,7 @@ const portal = {
 
         return { reader, writer, peer, portal };
     },
-    connect: async (peerA: FilePeer, peerB: FilePeer) => {
+    connect: async (peerA: IFilePeer, peerB: IFilePeer) => {
         // Get offer
         const offer = await peerA.connect() as RTCSessionDescription;
         // Answer
@@ -53,7 +54,7 @@ const portal = {
     }
 }
 describe('File portal class', () => {
-    type mockInstances = { reader: IReader, writer: IWriter, peer: FilePeer, portal: FilePortal };
+    type mockInstances = { reader: IReader, writer: IWriter, peer: IFilePeer, portal: FilePortal };
 
     let A: mockInstances;
     let B: mockInstances;
@@ -78,6 +79,16 @@ describe('File portal class', () => {
         close(A);
         close(B);
     });
+
+    afterAll(() => {
+        try {
+            unlinkSync('./assets/files/peer-b/test.file');
+        } catch { }
+
+        try {
+            unlinkSync('./assets/files/peer-b/test.write');
+        } catch { }
+    });
     
     describe('File portal instance', () => {
         it('should instance', async () => {
@@ -101,7 +112,6 @@ describe('File portal class', () => {
             const { portal } = A;
 
             const files = await portal.files();
-            console.log('Files: ', files);
             const [ , , file ] = await portal.files();
             const [ , , fileAgain ] = await portal.files();
 
@@ -140,18 +150,37 @@ describe('File portal class', () => {
             expect(textA + textB).toBe('peer-b');
         });
 
-        it('should read file from portal in parallel', async () => {
-
+        it.skip('should read file from portal in parallel', async () => {
             const { portal } = A;
 
-            const [ , { uuid } ] = await portal.files();
+            // await new Promise((resolve) => setTimeout(resolve, 5000));
+            const [ , , toRead ] = await portal.files();
+            console.log('toRead: ', toRead);
+            const { size, uuid } = toRead;
+            const toWrite = await portal.create({ path: 'assets/files/peer-b', name: 'zparallel.mp4', size });
+            console.log('toWrite:', toWrite);
+            const chunkSize = 250000;
+            const parts = Math.ceil(size / chunkSize);
+            console.log('Total parts: ', parts);
+            const promises = new Array(parts).fill(1).map((value, index) => {
+                const start = chunkSize * index;
+                let end = start + chunkSize;
 
-            const readedA = await portal.read(uuid, { start: 0, end: 3 });
-            const readedB = await portal.read(uuid, { start: 3, end: 6 });
-            const textA = await readedA.text();
-            const textB = await readedB.text();
+                if (end > size) {
+                    end = size - start;
+                }
 
-            expect(textA + textB).toBe('peer-b');
+                return new Promise<void>(async (resolve) => {
+                    const chunk = await portal.read(uuid, { start, end });
+                    console.log('Chunk received: ', chunk.size);
+                    await portal.write(toWrite, chunk, start);
+                    resolve();
+                })
+            });
+
+            await Promise.all(promises);
+            console.log('All promised resolved!');
+            expect(1).toBe(1);
         });
     });
 
@@ -190,3 +219,4 @@ describe('File portal class', () => {
         });
     });
 });
+

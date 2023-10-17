@@ -19,7 +19,7 @@ const servers = {
     iceCandidatePoolSize: 10,
 };
 
-describe.skip('File peer class', () => {
+describe('File peer class', () => {
 
     let peer: FilePeer;
 
@@ -43,12 +43,5 @@ describe.skip('File peer class', () => {
 
             expect(filePeer).toBeInstanceOf(FilePeer);
         });
-
-        // it('should create signal tunnel on instance', () => {
-        //     const filePeer = get();
-
-        //     expect(filePeer['tunnels'].all.length).toBe(1);
-        //     expect(filePeer['tunnels'].signal.self).toBeInstanceOf(FileTunnel);
-        // });
     });
 });

@@ -5,9 +5,9 @@ import { IFileTunnel } from "../interfaces/file-tunnel.interface";
 import { IReader, IWriter } from "file-agents";
 import { QueryParams, ResultMethods } from "../types";
 
-export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IFileTunnel<T>*/ {
+export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFileTunnel<T> {
 
-    public readonly label: string;
+    public readonly label: `${string}-${string}-${string}-${string}-${string}`;
     public opened = false;
     public opening: Promise<void>;
 
@@ -26,16 +26,23 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IF
     public get toWait() {
         return this.waitingList.length;
     }
+
+    private Locked = false;
+
+    public get locked() {
+        return this.Locked;
+    }
     
+    public lock() {
+        this.Locked = true;
+    }
+
+    public free() {
+        this.Locked = false;
+    }
 
     constructor(private channel: RTCDataChannel) {
-        this.label = (() => {
-            let method = channel.label;
-            try {
-                ({ method } = JSON.parse(channel.label));
-            } catch(e) { }
-            return method;
-        })();
+        this.label = channel.label as `${string}-${string}-${string}-${string}-${string}`;
         // Handle when open
         this.opening = new Promise<void>((resolve) => {
             channel.onopen = () => resolve();
@@ -62,7 +69,6 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IF
     
                     result = parsed;
                 }
-
                 this.on.message.next(result as ReturnType<ResultMethods<T>>);
             } catch(e) {
                 console.log('Error handling message: ', e);
@@ -100,8 +106,8 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IF
 
     public query(method: T, ...params: QueryParams<T>) {
 
-        const promise = new Promise<Awaited<ReturnType<ResultMethods<T>>>>(async (resolve) => {
-            const subscription = this.on.message.subscribe((data) => {
+        const promise = new Promise<Awaited<ReturnType<ResultMethods<T>>>>(async (resolve, reject) => {
+            const onMessage = this.on.message.subscribe((data) => {
                 const message = (() => {
                     let message = data;
 
@@ -114,7 +120,23 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> /*implements IF
 
                 resolve(message as any);
 
-                subscription.unsubscribe();
+                onMessage.unsubscribe();
+                onError.unsubscribe();
+            });
+            const onError = this.on.error.subscribe((data) => {
+                const message = (() => {
+                    let message = data;
+
+                    try {
+                        message = JSON.parse(message as unknown as string);
+                    } catch { }
+
+                    return message;
+                })();
+
+                reject(message);
+                onMessage.unsubscribe();
+                onError.unsubscribe();
             });
             // Clean params
             const cleaned = params.filter((param) => param !== undefined);
