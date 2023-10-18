@@ -27,7 +27,7 @@ const portal = {
         const reader = new NodeReader(path);
         const writer = new NodeWriter();
 
-        const peer = new FilePeer();
+        const peer = new FilePeer(servers);
 
         const portal = new FilePortal(reader, writer, peer);
 
@@ -87,6 +87,10 @@ describe('File portal class', () => {
 
         try {
             unlinkSync('./assets/files/peer-b/test.write');
+        } catch { }
+
+        try {
+            unlinkSync('./assets/files/peer-b/zparallel.mp4');
         } catch { }
     });
     
@@ -150,18 +154,16 @@ describe('File portal class', () => {
             expect(textA + textB).toBe('peer-b');
         });
 
-        it.skip('should read file from portal in parallel', async () => {
+        it('should read file from portal in parallel', async () => {
             const { portal } = A;
+            const { portal: portalB } = B;
 
-            // await new Promise((resolve) => setTimeout(resolve, 5000));
             const [ , , toRead ] = await portal.files();
-            console.log('toRead: ', toRead);
             const { size, uuid } = toRead;
             const toWrite = await portal.create({ path: 'assets/files/peer-b', name: 'zparallel.mp4', size });
-            console.log('toWrite:', toWrite);
-            const chunkSize = 250000;
+            const chunkSize = 50000;
             const parts = Math.ceil(size / chunkSize);
-            console.log('Total parts: ', parts);
+
             const promises = new Array(parts).fill(1).map((value, index) => {
                 const start = chunkSize * index;
                 let end = start + chunkSize;
@@ -170,17 +172,20 @@ describe('File portal class', () => {
                     end = size - start;
                 }
 
-                return new Promise<void>(async (resolve) => {
+                return new Promise<void>(async (resolve, reject) => {
                     const chunk = await portal.read(uuid, { start, end });
-                    console.log('Chunk received: ', chunk.size);
                     await portal.write(toWrite, chunk, start);
                     resolve();
-                })
+                });
             });
 
             await Promise.all(promises);
-            console.log('All promised resolved!');
-            expect(1).toBe(1);
+
+            const [ , , , parallel ] = await portal.files();
+            console.log('Parallel: ', parallel);
+            console.log('To read: ', toRead);
+            console.log('Same size: ', parallel.size === toRead.size);
+            expect(parallel.size).toBe(toRead.size);
         });
     });
 

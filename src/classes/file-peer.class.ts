@@ -15,13 +15,19 @@ export class FilePeer implements IFilePeer {
         response: [] as IFileTunnel<any>[],
         get: () => {
             const tunnels = [ ...this.tunnels.call ];
-            const [ tunnel ] = tunnels.sort((a, b) => a.toWait - b.toWait);
+
+            // First find one free
+            let tunnel = tunnels.find((tunnel) => !tunnel.locked);
+            // Else find next with less waiting list
+            if (!tunnel) {
+                [ tunnel ] = tunnels.sort((a, b) => a.toWait - b.toWait);
+            }
 
             let result: IFileTunnel<any> | Promise<IFileTunnel<any>> = tunnel;
 
             if (tunnel.locked) {
                 result = new Promise<IFileTunnel<any>>((resolve) => {
-                    tunnel.wait(() => resolve(tunnel));
+                    (tunnel as IFileTunnel<any>).wait(() => resolve(tunnel as IFileTunnel<any>));
                 });
             }
 
@@ -36,7 +42,8 @@ export class FilePeer implements IFilePeer {
         query: new Subject<SignalMessage>()
     }
 
-    constructor(config?: RTCConfiguration) {
+    constructor(config?: RTCConfiguration,
+                pool: number = 128) {
         const peer = new RTCPeerConnection(config);
 
         this.peer = peer;
@@ -48,7 +55,7 @@ export class FilePeer implements IFilePeer {
             }
         });
 
-        const MAX_TUNNEL_POOL = 128;
+        const MAX_TUNNEL_POOL = pool;
         let max = MAX_TUNNEL_POOL;
 
         while(max--) {

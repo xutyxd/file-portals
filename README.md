@@ -1,4 +1,4 @@
-# File Portals
+# File Portals ![NPM Downloads](https://img.shields.io/npm/dw/file-portals)
 File sharing package without the need to use a server.
 The objetive is to allow to comunicate servers and webs directly to transfer files.
 
