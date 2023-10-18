@@ -61,7 +61,7 @@
     "wrtc": "^0.4.7"
   },
   "dependencies": {
-    "file-agents": "^1.7.2",
+    "file-agents": "^1.7.3",
     "rxjs": "^7.8.1"
   }
 }

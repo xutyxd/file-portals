@@ -160,7 +160,7 @@ describe('File portal class', () => {
             const [ , , toRead ] = await portal.files();
             const { size, uuid } = toRead;
             const toWrite = await portal.create({ path: 'assets/files/peer-b', name: 'zparallel.mp4', size });
-            const chunkSize = 262144;
+            const chunkSize = 15000;
             const parts = Math.ceil(size / chunkSize);
 
             const promises = new Array(parts).fill(1).map((value, index) => {
@@ -181,10 +181,8 @@ describe('File portal class', () => {
             await Promise.all(promises);
 
             const [ , , , parallel ] = await portal.files();
-            console.log('Parallel: ', parallel);
-            console.log('To read: ', toRead);
-            console.log('Same size: ', parallel.size === toRead.size);
-            expect(1).toBe(1);
+
+            expect(parallel.size).toBe(toRead.size);
         });
     });
 

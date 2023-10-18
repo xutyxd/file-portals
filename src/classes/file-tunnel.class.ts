@@ -114,7 +114,7 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
                     let message = data;
 
                     try {
-                        message = JSON.parse(message as unknown as string);
+                        message = message instanceof Blob ? message : JSON.parse(message as unknown as string);
                     } catch { }
 
                     return message;
