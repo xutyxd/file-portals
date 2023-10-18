@@ -9,6 +9,12 @@ export class FilePeer implements IFilePeer {
 
     private peer: RTCPeerConnection;
 
+    private waitingList: ((tunnel: IFileTunnel<any>) => void)[] = [];
+
+    public wait(toWait: (tunnel: IFileTunnel<any>) => void) {
+        this.waitingList.push(toWait);
+    }
+
     private Candidates: RTCIceCandidate[] = [];
     private tunnels = {
         call: [] as IFileTunnel<any>[],
@@ -19,23 +25,34 @@ export class FilePeer implements IFilePeer {
             // First find one free
             let tunnel = tunnels.find((tunnel) => !tunnel.locked);
             // Else find next with less waiting list
+            // if (!tunnel) {
+            //     [ tunnel ] = tunnels.sort((a, b) => a.toWait - b.toWait);
+            // }
+
+            let result: IFileTunnel<any> | Promise<IFileTunnel<any>> | undefined = tunnel;
+
+            // if (tunnel.locked) {
+            //     result = new Promise<IFileTunnel<any>>((resolve) => {
+            //         (tunnel as IFileTunnel<any>).wait(() => resolve(tunnel as IFileTunnel<any>));
+            //     });
+            // }
+
             if (!tunnel) {
-                [ tunnel ] = tunnels.sort((a, b) => a.toWait - b.toWait);
-            }
-
-            let result: IFileTunnel<any> | Promise<IFileTunnel<any>> = tunnel;
-
-            if (tunnel.locked) {
                 result = new Promise<IFileTunnel<any>>((resolve) => {
-                    (tunnel as IFileTunnel<any>).wait(() => resolve(tunnel as IFileTunnel<any>));
+                    this.wait(resolve);
                 });
             }
 
-            return result;
+            return result as IFileTunnel<any> | Promise<IFileTunnel<any>>;
         }
     };
 
-    private onCandidates: Promise<void>;
+    private ON = {
+        candidates: undefined as Promise<void> | undefined,
+        free: new Subject<IFileTunnel<any>>()
+    }
+
+    // private onCandidates: Promise<void>;
 
     public opening: Promise<void>;
     public on = {
@@ -48,7 +65,7 @@ export class FilePeer implements IFilePeer {
 
         this.peer = peer;
 
-        this.onCandidates = new Promise((resolve) => {
+        this.ON.candidates = new Promise((resolve) => {
             // Handle ice candidates to export after conection
             peer.onicecandidate = ({ candidate }) => {
                 candidate && this.Candidates.push(candidate) && resolve();
@@ -62,12 +79,24 @@ export class FilePeer implements IFilePeer {
             try {
                 const channel = peer.createDataChannel(crypto.randomUUID());
                 const tunnel = new FileTunnel<any>(channel);
+
+                tunnel.on.free.subscribe(() => this.ON.free.next(tunnel));
                 this.tunnels.call.push(tunnel);
             } catch(e) {
                 console.info('Reached max tunnel size in: ', max);
                 break;
             }
         }
+
+        this.ON.free.subscribe((tunnel) => {
+            const [ wait ] = this.waitingList.splice(0, 1);
+
+            if (!wait) {
+                return;
+            }
+
+            wait(tunnel);
+        });
 
         this.opening = new Promise((resolve) => {
             this.peer.onconnectionstatechange = () => {
@@ -167,7 +196,7 @@ export class FilePeer implements IFilePeer {
             ([] as RTCIceCandidate[]).concat(candidates).forEach((candidate) => this.peer.addIceCandidate(candidate));
         },
         export: async () => {
-            await this.onCandidates;
+            await this.ON.candidates;
             return [ ...this.Candidates ];
         }
     }

@@ -14,7 +14,8 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
     public on = {
         query: new Subject<{ method: T, params: QueryParams<T>}>(),
         error: new Subject<string>(),
-        message: new Subject<ReturnType<ResultMethods<T>>>()
+        message: new Subject<ReturnType<ResultMethods<T>>>(),
+        free: new Subject<void>()
     }
 
     private waitingList: (() => void)[] = [];
@@ -39,6 +40,7 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
 
     public free() {
         this.Locked = false;
+        this.on.free.next();
     }
 
     constructor(private channel: RTCDataChannel) {
