@@ -29,7 +29,7 @@ const portal = {
 
         const peer = new FilePeer(servers);
 
-        const portal = new FilePortal(reader, writer, peer);
+        const portal = new FilePortal(reader, writer, peer, { name: name || 'test', type: 'server' });
 
         if (name) {
             portal.name = name;
@@ -49,8 +49,7 @@ const portal = {
             // Exchange candidates
             const candidatesA = await peerA.candidates.export();
             peerB.candidates.import(candidatesA);
-        } catch(e) {
-        }
+        } catch { }
     }
 }
 describe('File portal class', () => {
@@ -64,6 +63,7 @@ describe('File portal class', () => {
         B = await portal.get(`${assets}/peer-b`, 'B');
 
         await portal.connect(A.peer, B.peer);
+        await Promise.all([ A.portal.opening, B.portal.opening ]);
     });
 
     afterEach(async () => {
@@ -156,7 +156,6 @@ describe('File portal class', () => {
 
         it('should read file from portal in parallel', async () => {
             const { portal } = A;
-            const { portal: portalB } = B;
 
             const [ , , toRead ] = await portal.files();
             const { size, uuid } = toRead;

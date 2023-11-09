@@ -35,8 +35,8 @@ You have to indicate what type of data will be use to write on filesystem. In th
 
 ### Instanciation
 ``` ts
-const peerA = new FilePeer<Buffer>(); 
-const peerB = new FilePeer<Buffer>(); 
+const peerA = new FilePeer(); 
+const peerB = new FilePeer(); 
 
 ```
 ### Connect peers
@@ -66,13 +66,15 @@ import { IReader, IWriter, NodeReader, NodeWriter } from 'file-agents';
 
 const reader = new NodeReader('path/where/files/will/be/shared');
 const writer = new NodeWriter({ name: 'file-to-share' }); // Forget it at this moment
-const portal = new FilePortal(reader, writer, peerA);
+const portal = new FilePortal(reader, writer, peerA/*, { name: 'Portal', type: 'client' }*/); // Optionally can added a name and a type. By default type is client
+
+
 ```
 
 ### Getting files from the other portal
 
 ``` ts
-const files = await portalA.files();
+const files = await portalA.files(); // If the other portal is a client, it has to accept the request, it`s a security breach that its parched.
 ```
 
 ### Read from file from the other portal

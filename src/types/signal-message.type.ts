@@ -1,6 +1,8 @@
 import { QueryParams } from "./query-params.type"
 
 export type SignalMessage = {
+    uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'information', data: QueryParams<'information'>
+} | {    
     uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'read', data: QueryParams<'read'>
 } | {
     uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'files', data: QueryParams<'files'>

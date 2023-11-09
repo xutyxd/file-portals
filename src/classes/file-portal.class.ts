@@ -2,25 +2,51 @@ import { IReader, IWriter } from "file-agents";
 import { IFilePortal } from "../interfaces/file-portal.interface";
 import { Methods, ResultMethods } from "../types";
 import { IFilePeer } from "../interfaces/file-peer.interface";
+import { Subject } from "rxjs";
 
 export class FilePortal implements IFilePortal {
 
+    private destination?: { name: string, type: 'server' | 'client' };
+
     public name = 'Portal';
+    public type: 'server' | 'client' = 'client';
     public opened = false;
     public opening: Promise<void>;
 
+    public on = {
+        files: new Subject<{ resolve: () => void, reject: () => void }>()
+    }
+
     constructor(private reader: IReader,
                 private writer: IWriter,
-                private peer: IFilePeer) {
+                private peer: IFilePeer,
+                miscellaneous?: { name: string, type: FilePortal['type'] }) {
 
-        this.opening = peer.opening;
+        if (miscellaneous) {
+            const { name, type } = miscellaneous;
+            this.name = name;
+            this.type = type;
+        }
 
         peer.on.query.subscribe(async ({ uuid, method, data }) => {
             let result: Awaited<ReturnType<ResultMethods<typeof method>>>;
 
             try {
                 switch (method) {
+                    case 'information': 
+                        result = { name: this.name, type: this.type };
+                        break;
                     case 'files':
+                        if (this.type === 'client') {
+                            try {
+                                await new Promise<void>((resolve, reject) => {
+                                    this.on.files.next({ resolve, reject });
+                                });
+                            } catch {
+                                throw new Error('Peer rejected to share files');
+                            }
+                        }
+
                         result = await this.reader[method].apply(this.reader, data);
                         break;
                     case 'read':
@@ -52,30 +78,65 @@ export class FilePortal implements IFilePortal {
 
             this.peer.response(uuid, result);
         });
+
+        this.opening = new Promise(async (resolve) => {
+            await peer.opening;
+            this.destination = await this.information();
+
+            this.opened = true;
+            resolve();
+        });
     }
 
+    public async information() {
+        return await this.peer.call('information');
+    }
 
     public async files(): ReturnType<IReader['files']> {
+        if (!this.opened) {
+            await this.opening;
+        }
+
         return this.peer.call('files');
     }
 
     public async read(uuid: string, options: { start: number; end: number; }): Promise<Blob> {
+        if (!this.opened) {
+            await this.opening;
+        }
+
         return this.peer.call('read', uuid, options);
     }
 
     public async create(where: { path?: string | undefined; name: string; size: number; }) {
+        if (!this.opened) {
+            await this.opening;
+        }
+        
         return this.peer.call('create', where);
     }
 
     public async write(uuid: string, data: Blob, position: number): Promise<void> {
+        if (!this.opened) {
+            await this.opening;
+        }
+
         return this.peer.call('write', uuid, data, position);
     }
 
     public async close(uuid: string) {
+        if (!this.opened) {
+            await this.opening;
+        }
+
         return this.peer.call('close', uuid);
     }
 
     public async shutdown(): Promise<void> {
+        if (!this.opened) {
+            await this.opening;
+        }
+
         await this.peer.close();
     }
 }
