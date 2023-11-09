@@ -170,7 +170,7 @@ describe('File portal class', () => {
                 if (end > size) {
                     end = size;
                 }
-                console.log(`Reading from ${start} to ${end}`);
+
                 return new Promise<void>(async (resolve, reject) => {
                     const chunk = await portal.read(uuid, { start, end });
                     await portal.write(toWrite, chunk, start);
