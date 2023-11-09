@@ -39,7 +39,8 @@ export class FilePeer implements IFilePeer {
 
     public opening: Promise<void>;
     public on = {
-        query: new Subject<SignalMessage>()
+        query: new Subject<SignalMessage>(),
+        close: new Subject<void>()
     }
 
     constructor(config?: RTCConfiguration,
@@ -71,11 +72,24 @@ export class FilePeer implements IFilePeer {
 
         this.opening = new Promise((resolve) => {
             this.peer.onconnectionstatechange = () => {
-                if (this.peer.connectionState !== 'connected') {
-                    return;
-                }
 
-                resolve();
+                switch (this.peer.connectionState) {
+                    case "new":
+                    case "connecting":
+                      break;
+                    case "connected":
+                        resolve();
+                      break;
+                    case "disconnected":
+                      break;
+                    case "closed":
+                        this.on.close.next();
+                      break;
+                    case "failed":
+                      break;
+                    default:
+                      break;
+                  }
             }
         });
 

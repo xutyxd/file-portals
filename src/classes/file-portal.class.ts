@@ -14,7 +14,8 @@ export class FilePortal implements IFilePortal {
     public opening: Promise<void>;
 
     public on = {
-        files: new Subject<{ resolve: () => void, reject: () => void }>()
+        files: new Subject<{ resolve: () => void, reject: () => void }>(),
+        close: new Subject<void>()
     }
 
     constructor(private reader: IReader,
@@ -27,6 +28,8 @@ export class FilePortal implements IFilePortal {
             this.name = name;
             this.type = type;
         }
+
+        peer.on.close.subscribe(() => this.on.close.next());
 
         peer.on.query.subscribe(async ({ uuid, method, data }) => {
             let result: Awaited<ReturnType<ResultMethods<typeof method>>>;
