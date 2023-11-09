@@ -134,7 +134,7 @@ describe('File portal class', () => {
 
             const [ , { uuid } ] = await portal.files();
 
-            const readed = await portal.read(uuid, { start: 0, end: 10 });
+            const readed = await portal.read(uuid, { start: 0, end: 6 });
             const text = await readed.text();
 
             expect(text).toBe('peer-b');
@@ -168,9 +168,9 @@ describe('File portal class', () => {
                 let end = start + chunkSize;
 
                 if (end > size) {
-                    end = size - start;
+                    end = size;
                 }
-
+                console.log(`Reading from ${start} to ${end}`);
                 return new Promise<void>(async (resolve, reject) => {
                     const chunk = await portal.read(uuid, { start, end });
                     await portal.write(toWrite, chunk, start);
