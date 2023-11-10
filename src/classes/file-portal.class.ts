@@ -6,12 +6,16 @@ import { Subject } from "rxjs";
 
 export class FilePortal implements IFilePortal {
 
-    private destination?: { name: string, type: 'server' | 'client' };
+    private Destination?: { name: string, type: 'server' | 'client' };
 
     public name = 'Portal';
     public type: 'server' | 'client' = 'client';
     public opened = false;
     public opening: Promise<void>;
+
+    public get destination() {
+        return { ...this.Destination };
+    }
 
     public on = {
         files: new Subject<{ resolve: () => void, reject: () => void }>(),
@@ -84,7 +88,7 @@ export class FilePortal implements IFilePortal {
 
         this.opening = new Promise(async (resolve) => {
             await peer.opening;
-            this.destination = await this.information();
+            this.Destination = await this.information();
 
             this.opened = true;
             resolve();
