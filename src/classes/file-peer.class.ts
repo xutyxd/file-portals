@@ -80,12 +80,11 @@ export class FilePeer implements IFilePeer {
                     case "connected":
                         resolve();
                       break;
+                    case "failed":
                     case "disconnected":
-                      break;
                     case "closed":
                         this.on.close.next();
                       break;
-                    case "failed":
                       break;
                     default:
                       break;
