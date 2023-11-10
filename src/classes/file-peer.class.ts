@@ -189,6 +189,8 @@ export class FilePeer implements IFilePeer {
         await Promise.all(tunnels.map((tunnel) => tunnel.close()));
 
         this.peer.close();
+
+        this.on.close.next();
     }
 }
 
