@@ -79,7 +79,7 @@ export class FilePortal implements IFilePortal {
             } catch(e) {
                 console.log('Error: ', e);
                 const error = e as Error;
-                this.peer.response(uuid, { error: error.message } as any);
+                this.peer.response(uuid, { type: 'error', message: error.message } as any);
                 return;
             }
 

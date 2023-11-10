@@ -85,7 +85,6 @@ export class FilePeer implements IFilePeer {
                     case "closed":
                         this.on.close.next();
                       break;
-                      break;
                     default:
                       break;
                   }
@@ -189,10 +188,7 @@ export class FilePeer implements IFilePeer {
         const tunnels = [ ...this.tunnels.call, ...this.tunnels.response ];
         await Promise.all(tunnels.map((tunnel) => tunnel.close()));
 
-        await new Promise<void>((resolve) => {
-            this.peer.onconnectionstatechange = () => resolve();
-            this.peer.close();
-        });
+        this.peer.close();
     }
 }
 

@@ -56,10 +56,10 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
                     result = new Blob([ data ]);
                 } else {
                     const parsed = this.parse(data);
-                    const { type, method, params } = parsed;
+                    const { type, method, params, message = '' } = parsed;
     
                     if (type === 'error') {
-                        this.on.error.next(params);
+                        this.on.error.next(message);
                         return;
                     }
 
@@ -76,7 +76,7 @@ export class FileTunnel<T extends keyof IReader | keyof IWriter> implements IFil
         }
     }
 
-    private parse(data: any): { type: 'query' | 'error', method: T, params: any } {
+    private parse(data: any): { type: 'query' | 'error', method: T, params: any, message?: string } {
 
         let parsed = data;
 
