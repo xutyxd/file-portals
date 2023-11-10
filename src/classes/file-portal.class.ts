@@ -139,11 +139,9 @@ export class FilePortal implements IFilePortal {
         return this.peer.call('close', uuid);
     }
 
-    public async shutdown(): Promise<void> {
-        if (!this.opened) {
-            await this.opening;
-        }
-
-        await this.peer.close();
+    public shutdown(): Promise<void> | void {
+        try {
+            return this.peer.close();
+        } catch { }
     }
 }
