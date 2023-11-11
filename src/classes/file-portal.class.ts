@@ -76,7 +76,8 @@ export class FilePortal implements IFilePortal {
                         result = await this.writer[method].apply(this.writer, data);
                         break;
                     case 'shutdown':
-                        result = await this.shutdown();
+                        // Notifify that portal was closed in the other side
+                        result = this.on.close.next();
                 }
             } catch(e) {
                 console.log('Error: ', e);
