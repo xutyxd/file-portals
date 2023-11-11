@@ -12,4 +12,6 @@ export type SignalMessage = {
     uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'write', data: QueryParams<'write'>
 } | {
     uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'close', data: QueryParams<'close'>
+} | {
+    uuid: `${string}-${string}-${string}-${string}-${string}`, method: 'shutdown', data: QueryParams<'shutdown'>
 }

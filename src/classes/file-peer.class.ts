@@ -132,7 +132,7 @@ export class FilePeer implements IFilePeer {
             tunnel.lock();
         }
 
-        let response;
+        let response: ReturnType<ResultMethods<T>>;
         try {
             response = await tunnel.query.apply(tunnel, [method, ...params]);
         } catch(e) {

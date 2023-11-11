@@ -75,6 +75,8 @@ export class FilePortal implements IFilePortal {
                     case 'close':
                         result = await this.writer[method].apply(this.writer, data);
                         break;
+                    case 'shutdown':
+                        result = await this.shutdown();
                 }
             } catch(e) {
                 console.log('Error: ', e);
@@ -139,8 +141,9 @@ export class FilePortal implements IFilePortal {
         return this.peer.call('close', uuid);
     }
 
-    public shutdown(): Promise<void> | void {
+    public async shutdown(): Promise<void> {
         try {
+            await this.peer.call('shutdown');
             return this.peer.close();
         } catch { }
     }
