@@ -67,8 +67,7 @@ describe('File portal class', () => {
     });
 
     afterEach(async () => {
-        const close = ({ peer, portal }: mockInstances) => {
-            peer.close();
+        const close = ({ portal }: mockInstances) => {
             portal.shutdown();
         }
 
