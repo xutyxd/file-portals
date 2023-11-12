@@ -39,8 +39,9 @@ export class FilePeer implements IFilePeer {
 
     public opening: Promise<void>;
     public on = {
+        candidate: new Subject<RTCIceCandidate>(),
         query: new Subject<SignalMessage>(),
-        close: new Subject<void>()
+        close: new Subject<void>(),
     }
 
     constructor(config?: RTCConfiguration,
@@ -50,11 +51,20 @@ export class FilePeer implements IFilePeer {
         this.peer = peer;
 
         this.onCandidates = new Promise((resolve) => {
-            // Handle ice candidates to export after conection
-            peer.onicecandidate = ({ candidate }) => {
-                candidate && this.Candidates.push(candidate) && resolve();
-            }
+            const subscription = this.on.candidate.subscribe(() => {
+                resolve();
+                subscription.unsubscribe();
+            });
         });
+
+        peer.onicecandidate = ({ candidate }) => {
+            if (!candidate) {
+                return;
+            }
+
+            this.Candidates.push(candidate);
+            this.on.candidate.next(candidate);
+        }
 
         const MAX_TUNNEL_POOL = pool;
         let max = MAX_TUNNEL_POOL;
@@ -90,7 +100,6 @@ export class FilePeer implements IFilePeer {
                   }
             }
         });
-
         // Handle channels
         peer.ondatachannel = (event) => {
             if (!event.channel) {

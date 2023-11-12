@@ -5,6 +5,7 @@ import { Methods, QueryParams, ResultMethods, SignalMessage } from "../types";
 export interface IFilePeer {
     opening: Promise<void>;
     on: {
+        candidate: Subject<RTCIceCandidate>,
         query: Subject<SignalMessage>,
         close: Subject<void>
     }
