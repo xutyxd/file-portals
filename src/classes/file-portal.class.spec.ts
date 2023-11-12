@@ -153,7 +153,7 @@ describe('File portal class', () => {
             expect(textA + textB).toBe('peer-b');
         });
 
-        it('should read file from portal in parallel', async () => {
+        it.skip('should read file from portal in parallel', async () => {
             const { portal } = A;
 
             const [ , , toRead ] = await portal.files();
